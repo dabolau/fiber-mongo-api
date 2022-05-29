@@ -22,5 +22,5 @@ func EnvMongoDbName() string {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	return os.Getenv("DBNAME")
+	return os.Getenv("MONGODBNAME")
 }
