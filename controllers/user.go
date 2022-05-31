@@ -20,14 +20,35 @@ var validate = validator.New()
 
 // 用户信息
 func UserHandler(c *fiber.Ctx) error {
-
-	return c.Status(fiber.StatusOK).JSON(responses.ResponseUser{
-		Message:    "查询所有成功",
+	// 数据模型
+	var users []models.User
+	// 查询数据
+	cursor, err := userCollection.Find(c.Context(), bson.M{})
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(responses.ResponseUser{
+			Message:    "查询失败",
+			StatusCode: fiber.StatusNotFound,
+		})
+	}
+	log.Println(cursor)
+	// 获取所有数据
+	err = cursor.All(c.Context(), &users)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(responses.ResponseUser{
+			Message:    "查询失败",
+			StatusCode: fiber.StatusNotFound,
+		})
+	}
+	// 查询成功
+	return c.Status(fiber.StatusOK).JSON(responses.ResponseMultipleUser{
+		Datas:      users,
+		Message:    "查询成功",
 		StatusCode: fiber.StatusOK,
 	})
 }
 
 // 用户详情
+// https://docs.gofiber.io/api/app#route-handlers
 func UserDetailHandler(c *fiber.Ctx) error {
 	// 数据模型
 	var user models.User
@@ -35,16 +56,16 @@ func UserDetailHandler(c *fiber.Ctx) error {
 	objectId, err := primitive.ObjectIDFromHex(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ResponseUser{
-			Message:    "服务器错误",
+			Message:    "编号错误",
 			StatusCode: fiber.StatusInternalServerError,
 		})
 	}
 	// 查询数据
 	err = userCollection.FindOne(c.Context(), bson.M{"_id": objectId}).Decode(&user)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.ResponseUser{
-			Message:    "数据库服务器错误",
-			StatusCode: fiber.StatusInternalServerError,
+		return c.Status(fiber.StatusNotFound).JSON(responses.ResponseUser{
+			Message:    "查询失败",
+			StatusCode: fiber.StatusNotFound,
 		})
 	}
 	// 查询成功
@@ -53,7 +74,6 @@ func UserDetailHandler(c *fiber.Ctx) error {
 		Message:    "查询成功",
 		StatusCode: fiber.StatusOK,
 	})
-
 }
 
 // 用户添加
@@ -83,7 +103,7 @@ func UserAddHandler(c *fiber.Ctx) error {
 	result, err := userCollection.InsertOne(c.Context(), &requestUser)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ResponseUser{
-			Message:    "数据库服务器错误",
+			Message:    "添加失败",
 			StatusCode: fiber.StatusInternalServerError,
 		})
 	}
@@ -97,41 +117,101 @@ func UserAddHandler(c *fiber.Ctx) error {
 }
 
 // 用户编辑
+// https://docs.gofiber.io/api/app#route-handlers
 func UserChangeHandler(c *fiber.Ctx) error {
-
-	return c.Status(fiber.StatusOK).JSON(responses.ResponseUser{
-		Message:    "编辑成功",
+	// 数据模型
+	var requestUser models.User
+	var user models.User
+	// 获取编号
+	objectId, err := primitive.ObjectIDFromHex(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ResponseUser{
+			Message:    "编号错误",
+			StatusCode: fiber.StatusInternalServerError,
+		})
+	}
+	// 验证请求参数
+	err = c.BodyParser(&requestUser)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ResponseUser{
+			Message:    "请求参数错误",
+			StatusCode: fiber.StatusBadRequest,
+		})
+	}
+	// 使用验证器验证必填参数
+	err = validate.Struct(&requestUser)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ResponseUser{
+			Message:    "验证参数错误",
+			StatusCode: fiber.StatusBadRequest,
+		})
+	}
+	// 查询数据
+	err = userCollection.FindOne(c.Context(), bson.M{"_id": objectId}).Decode(&user)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(responses.ResponseUser{
+			Message:    "查询失败",
+			StatusCode: fiber.StatusNotFound,
+		})
+	}
+	// 更新数据
+	result, err := userCollection.UpdateOne(c.Context(), bson.M{"_id": objectId}, bson.M{"$set": requestUser})
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ResponseUser{
+			Message:    "更新失败",
+			StatusCode: fiber.StatusInternalServerError,
+		})
+	}
+	log.Println(result)
+	// 查询数据
+	err = userCollection.FindOne(c.Context(), bson.M{"_id": objectId}).Decode(&user)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(responses.ResponseUser{
+			Message:    "查询失败",
+			StatusCode: fiber.StatusNotFound,
+		})
+	}
+	// 更新成功
+	return c.Status(fiber.StatusOK).JSON(responses.ResponseSingleUser{
+		Data:       user,
+		Message:    "更新成功",
 		StatusCode: fiber.StatusOK,
 	})
 }
 
 // 用户删除
+// https://docs.gofiber.io/api/app#route-handlers
 func UserDeleteHandler(c *fiber.Ctx) error {
+	// 数据模型
+	var user models.User
 	// 获取编号
 	objectId, err := primitive.ObjectIDFromHex(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ResponseUser{
-			Message:    "服务器错误",
+			Message:    "编号错误",
 			StatusCode: fiber.StatusInternalServerError,
+		})
+	}
+	// 查询数据
+	err = userCollection.FindOne(c.Context(), bson.M{"_id": objectId}).Decode(&user)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(responses.ResponseUser{
+			Message:    "查询失败",
+			StatusCode: fiber.StatusNotFound,
 		})
 	}
 	// 删除数据
 	result, err := userCollection.DeleteOne(c.Context(), bson.M{"_id": objectId})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ResponseUser{
-			Message:    "数据库服务器错误",
+			Message:    "删除失败",
 			StatusCode: fiber.StatusInternalServerError,
 		})
 	}
-	// 编号未找到
-	if result.DeletedCount < 1 {
-		return c.Status(fiber.StatusNotFound).JSON(responses.ResponseUser{
-			Message:    "编号未找到",
-			StatusCode: fiber.StatusNotFound,
-		})
-	}
+	log.Println(result.DeletedCount)
 	// 删除成功
-	return c.Status(fiber.StatusOK).JSON(responses.ResponseUser{
+	return c.Status(fiber.StatusOK).JSON(responses.ResponseSingleUser{
+		Data:       user,
 		Message:    "删除成功",
 		StatusCode: fiber.StatusOK,
 	})

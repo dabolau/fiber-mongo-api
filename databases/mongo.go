@@ -14,7 +14,7 @@ import (
 var mongoURI = configs.EnvMongoURI()
 
 // 数据库名称
-var mongoDbName = configs.EnvMongoDbName()
+var mongoDbName = "fiber-mongo-api"
 
 // 数据库连接
 // https://www.mongodb.com/blog/post/quick-start-golang--mongodb--starting-and-setup
