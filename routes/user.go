@@ -12,14 +12,14 @@ import (
 func User(app *fiber.App) {
 	// 用户分组
 	userGroup := app.Group("/user")
-	// 获取所有用户信息
-	userGroup.Get("/all", controllers.UserHandler)
-	// 获取用户信息
-	userGroup.Get("/:id", controllers.UserDetailHandler)
-	// 添加用户
-	userGroup.Post("/", controllers.UserAddHandler)
-	// 编辑用户
-	userGroup.Put("/:id", controllers.UserChangeHandler)
-	// 删除用户
-	userGroup.Delete("/:id", controllers.UserDeleteHandler)
+	// 用户信息
+	userGroup.Get("/all/:pageSize/:page", controllers.UserAllHandler)
+	// 用户详情
+	userGroup.Get("/detail/:id", controllers.UserDetailHandler)
+	// 用户添加
+	userGroup.Post("/add", controllers.UserAddHandler)
+	// 用户编辑
+	userGroup.Put("/change/:id", controllers.UserChangeHandler)
+	// 用户删除
+	userGroup.Delete("/delete/:id", controllers.UserDeleteHandler)
 }

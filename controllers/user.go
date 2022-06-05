@@ -5,11 +5,13 @@ import (
 	"fiber-mongo-api/models"
 	"fiber-mongo-api/responses"
 	"log"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // 用户集合
@@ -19,18 +21,40 @@ var userCollection = databases.GetCollection(databases.MongoClient, "users")
 var validate = validator.New()
 
 // 用户信息
-func UserHandler(c *fiber.Ctx) error {
+func UserAllHandler(c *fiber.Ctx) error {
 	// 数据模型
 	var users []models.User
+	// 分页信息
+	var findOptions options.FindOptions
+	var page int64 = 1
+	var pageSize int64 = 10
+	if !(c.Params("page") == "") {
+		pageInt, _ := strconv.Atoi(c.Params("page"))
+		if pageInt == 0 {
+			pageInt = 1
+		}
+		page = int64(pageInt)
+	}
+	if !(c.Params("pageSize") == "") {
+		pageSizeInt, _ := strconv.Atoi(c.Params("pageSize"))
+		if pageSizeInt == 0 {
+			pageSizeInt = 10
+		}
+		pageSize = int64(pageSizeInt)
+	}
+	if pageSize > 0 {
+		findOptions.SetSkip((page - 1) * pageSize)
+		findOptions.SetLimit(pageSize)
+	}
 	// 查询数据
-	cursor, err := userCollection.Find(c.Context(), bson.M{})
+	cursor, err := userCollection.Find(c.Context(), bson.M{}, &findOptions)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(responses.ResponseUser{
 			Message:    "查询失败",
 			StatusCode: fiber.StatusNotFound,
 		})
 	}
-	log.Println(cursor)
+	defer cursor.Close(c.Context())
 	// 获取所有数据
 	err = cursor.All(c.Context(), &users)
 	if err != nil {
