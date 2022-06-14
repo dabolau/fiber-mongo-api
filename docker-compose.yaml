@@ -1,0 +1,50 @@
+# 版本信息
+version: '3'
+# 容器服务，包含多个容器
+services:
+  # 容器服务
+  api:
+    # 重启策略
+    restart: always
+    # 容器名称
+    image: dabolau/fiber-mongo-api:latest
+    # 端口[宿主机:容器]
+    ports:
+      - "8081:8081"
+    # 容器网络
+    networks:
+      - network
+    # 环境变量
+    environment:
+      - MONGO_ADDRESS=mongo:27017
+      - MONGO_USERNAME=username
+      - MONGO_PASSWORD=password
+  # 容器服务
+  mongo:
+    # 重启策略
+    restart: always
+    # 容器名称
+    image: mongo:latest
+    # 端口[宿主机:容器]
+    ports:
+      - "27017:27017"
+    # 容器网络
+    networks:
+      - network
+    # 环境变量
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=username
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    # 数据卷[宿主机:容器]
+    volumes:
+      - mongo-config:/data/configdb
+      - mongo-data:/data/db
+# 数据卷
+volumes:
+  # 命名数据卷名称与上面容器的宿主机数据卷名称一致
+  mongo-config:
+  mongo-data: 
+# 容器网络
+networks:
+  # 命名网络名称与上面容器的网络名称一致
+  network:
